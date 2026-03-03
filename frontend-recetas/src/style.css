@@ -1,0 +1,240 @@
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #0f172a; /* Azul muy oscuro de fondo */
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Centrado Absoluto */
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* La tarjeta con sombra y bordes suaves */
+.auth-card {
+  background: #1e293b; /* Azul grisáceo de la tarjeta */
+  padding: 3rem;
+  border-radius: 1.5rem;
+  width: 100%;
+  max-width: 450px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+
+.auth-title {
+  color: #10b981; /* El verde esmeralda brillante */
+  font-size: 2.2rem;
+  margin-bottom: 0.5rem;
+  font-weight: 800;
+}
+
+.auth-subtitle {
+  color: #94a3b8;
+  margin-bottom: 2rem;
+}
+
+/* Inputs Modernos */
+.input-group {
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.input-group label {
+  display: block;
+  color: #f8fafc;
+  margin-bottom: 0.6rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+input {
+  width: 100%;
+  padding: 14px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 0.75rem;
+  color: white;
+  box-sizing: border-box;
+  font-size: 1rem;
+}
+
+input:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+/* El Botón Mágico */
+.btn-submit {
+  background: #10b981;
+  color: white;
+  width: 100%;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+}
+
+.btn-submit:hover {
+  background: #059669;
+  transform: translateY(-2px);
+}
+
+.link-accent {
+  color: #10b981;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.link-guest {
+  display: block;
+  margin-top: 1.5rem;
+  color: #64748b;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+/* --- ESTILOS EXCLUSIVOS PARA EL HOME --- */
+
+/* Contenedor fluido para que las recetas ocupen el ancho de la pantalla */
+.home-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Cuadrícula de recetas */
+.recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+/* Tarjeta de receta (hereda la magia del Dark Mode) */
+.recipe-card {
+  background: #1e293b; /* Mismo color que .auth-card */
+  border-radius: 1.25rem;
+  overflow: hidden;
+  border: 1px solid #334155;
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.recipe-card:hover {
+  transform: translateY(-10px);
+  border-color: #10b981; /* Brillo esmeralda al pasar el mouse */
+}
+
+/* Contenedor de la imagen de la receta */
+.recipe-img-box {
+  width: 100%;
+  height: 200px;
+  background: #0f172a;
+}
+
+.recipe-img-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Cuerpo de la tarjeta */
+.recipe-body {
+  padding: 1.5rem;
+  text-align: left;
+}
+
+.recipe-body h3 {
+  color: #10b981; /* Verde esmeralda */
+  margin: 0 0 0.5rem 0;
+}
+
+.recipe-body p {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+/* Botón pequeño para las tarjetas */
+.btn-small {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  margin-top: 0;
+}
+
+/* Estilos específicos para la barra del Home */
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #334155;
+}
+
+.btn-logout {
+  background: #ef4444 !important; /* Rojo para cerrar sesión */
+  width: auto !important;
+  padding: 10px 20px !important;
+  margin-top: 0 !important;
+  font-size: 0.9rem !important;
+}
+
+.btn-logout:hover {
+  background: #dc2626 !important;
+}
+
+.btn-login-nav {
+  width: auto !important;
+  padding: 10px 20px !important;
+  margin-top: 0 !important;
+  font-size: 0.9rem !important;
+}
+
+/* Fondo oscuro translúcido para el Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.9); /* Basado en tu fondo principal */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* La tarjeta del formulario (hereda el estilo de .auth-card) */
+.modal-card {
+  background: #1e293b;
+  padding: 2.5rem;
+  border-radius: 1.5rem;
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  border: 1px solid #334155;
+}
+
+/* Textarea estilizado para la descripción */
+textarea {
+  width: 100%;
+  padding: 14px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 0.75rem;
+  color: white;
+  font-family: inherit;
+  margin-bottom: 1.5rem;
+  resize: none;
+}

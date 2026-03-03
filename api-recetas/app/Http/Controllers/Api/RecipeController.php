@@ -6,13 +6,14 @@ use App\Models\Recipe;
 use App\Models\RecipeImage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB; // Para transacciones seguras
 
 class RecipeController extends Controller {
 
-    // GET /api/recipes — público, con filtros y paginación
+    // GET /api/recipes — Público, con filtros y carga de relaciones
     public function index(Request $request) {
         $query = Recipe::with(['user:id,name', 'categories:id,name', 'images'])
-            ->where('status', 'published');
+            ->where('status', 'Publicada');
 
         if ($request->keyword) {
             $query->where('title', 'like', "%{$request->keyword}%");
@@ -23,105 +24,131 @@ class RecipeController extends Controller {
         if ($request->category_id) {
             $query->whereHas('categories', fn($q) => $q->where('categories.id', $request->category_id));
         }
-        if ($request->date) {
-            $query->whereDate('created_at', $request->date);
-        }
 
         return response()->json($query->latest()->paginate(10));
     }
 
-    // GET /api/recipes/{id}
-    public function show($id) {
-        $recipe = Recipe::with(['user:id,name', 'categories:id,name', 'images', 'reviews'])->findOrFail($id);
-        return response()->json($recipe);
-    }
+    // GET /api/recipes/{id} — Detalle completo con reseñas
+public function show($id) {
+    $recipe = Recipe::with([
+        'user:id,name', 
+        'categories:id,name', 
+        'images', 
+        'reviews.user:id,name'
+    ])->findOrFail($id);
 
-    // POST /api/recipes — requiere auth
-    public function store(Request $request) {
+    return response()->json($recipe);
+}
+
+    // POST /api/recipes — Crear con validación y subida de imagen
+public function store(Request $request) {
+    try {
         $request->validate([
-            'title'        => 'required|string',
-            'content'      => 'required',
-            'status'       => 'in:published,draft',
-            'category_ids' => 'array',
-            'images'       => 'array',
-            'images.*'     => 'image|max:2048',
+            'title'        => 'required|string|max:255',
+            'instructions' => 'required|string',
+            'category_id'  => 'nullable|exists:categories,id',
+            'new_category' => 'nullable|string|max:50',
+            'images'       => 'required|image|mimes:jpg,jpeg,png|max:2048', 
         ]);
 
-        $recipe = Recipe::create([
-            'title'   => $request->title,
-            'content' => $request->content,
-            'status'  => $request->status ?? 'draft',
-            'user_id' => $request->user()->id,
-        ]);
+        return DB::transaction(function () use ($request) {
+            // 1. Crear receta (SIN category_id aquí, va en la tabla pivote)
+            $recipe = Recipe::create([
+                'title'        => $request->title,
+                'instructions' => $request->instructions,
+                'status'       => 'Publicada',
+                'user_id'      => $request->user()->id,
+            ]);
 
-        if ($request->category_ids) {
-            $recipe->categories()->sync($request->category_ids);
+            // 2. Vincular Categoría (Tabla recipe_category de tus fotos)
+            if ($request->filled('new_category')) {
+                // Buscamos si ya existe la categoría por nombre
+                $category = \App\Models\Category::where('name', $request->new_category)->first();
+
+                // Si no existe, la creamos asignando el user_id manualmente
+                if (!$category) {
+                    $category = \App\Models\Category::create([
+                        'name' => $request->new_category,
+                        'user_id' => $request->user()->id // Cumplimos con la restricción de tu migración
+                    ]);
+                }
+                
+                $recipe->categories()->sync([$category->id]);
+            }
+
+            // 3. Imagen
+            if ($request->hasFile('images')) {
+                $path = $request->file('images')->store('recipes', 'public');
+                $recipe->images()->create([
+                    'image_path' => $path,
+                    'is_main'    => true
+                ]);
+                $recipe->update(['main_image' => $path]);
+            }
+
+            return response()->json($recipe->load(['categories', 'images']), 201);
+        });
+    } catch (\Exception $e) {
+        // Esto enviará el error real al log de Laravel
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+}
+
+    // PUT /api/recipes/{id} — Actualizar (Solo el dueño)
+public function update(Request $request, $id) {
+    $recipe = Recipe::where('id', $id)->where('user_id', $request->user()->id)->firstOrFail();
+
+    $request->validate([
+        'title'        => 'sometimes|required|string|max:255',
+        'instructions' => 'sometimes|required|string',
+        'category_id'  => 'nullable|exists:categories,id',
+        'new_category' => 'nullable|string|max:50',
+        'images'       => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+    ]);
+
+    return DB::transaction(function () use ($request, $recipe) {
+        $recipe->update($request->only(['title', 'instructions', 'status']));
+
+        // ACTUALIZAR CATEGORÍA EN EDICIÓN
+        if ($request->new_category) {
+            $category = \App\Models\Category::firstOrCreate(['name' => $request->new_category]);
+            $recipe->categories()->sync([$category->id]);
+        } elseif ($request->has('category_id')) {
+            // El sync con array vacío [] quita la categoría si mandan null
+            $recipe->categories()->sync($request->category_id ? [$request->category_id] : []);
         }
 
         if ($request->hasFile('images')) {
-            foreach ($request->file('images') as $index => $file) {
-                $path = $file->store('recipes', 'public');
-                $isMain = $index === 0;
-                RecipeImage::create(['recipe_id' => $recipe->id, 'path' => $path, 'is_main' => $isMain]);
-                if ($isMain) {
-                    $recipe->update(['main_image' => $path]);
-                }
-            }
-        }
+            $file = $request->file('images');
+            $path = $file->store('recipes', 'public');
 
-        return response()->json($recipe->load(['categories', 'images']), 201);
-    }
+            RecipeImage::create([
+                'recipe_id'  => $recipe->id, 
+                'image_path' => $path,
+                'is_main'    => true
+            ]);
 
-    // PUT /api/recipes/{id} — requiere auth + ser dueño
-    public function update(Request $request, $id) {
-        $recipe = Recipe::where('id', $id)->where('user_id', $request->user()->id)->firstOrFail();
-
-        $recipe->update($request->only(['title', 'content', 'status']));
-
-        if ($request->category_ids) {
-            $recipe->categories()->sync($request->category_ids);
+            $recipe->update(['main_image' => $path]);
         }
 
         return response()->json($recipe->load(['categories', 'images']));
-    }
+    });
+}
 
-    // DELETE /api/recipes/{id} — requiere auth + ser dueño
+    // DELETE /api/recipes/{id}
     public function destroy(Request $request, $id) {
         $recipe = Recipe::where('id', $id)->where('user_id', $request->user()->id)->firstOrFail();
-        $recipe->delete();
-        return response()->json(['message' => 'Receta eliminada']);
-    }
-
-    // POST /api/recipes/{id}/images — subir imágenes adicionales
-    public function addImages(Request $request, $id) {
-        $recipe = Recipe::where('id', $id)->where('user_id', $request->user()->id)->firstOrFail();
-
-        $request->validate(['images' => 'required|array', 'images.*' => 'image|max:2048']);
-
-        $uploaded = [];
-        foreach ($request->file('images') as $file) {
-            $path = $file->store('recipes', 'public');
-            $uploaded[] = RecipeImage::create(['recipe_id' => $recipe->id, 'path' => $path, 'is_main' => false]);
+        
+        // Opcional: Borrar archivos físicos del storage antes de borrar la BD
+        foreach($recipe->images as $img) {
+            Storage::disk('public')->delete($img->image_path);
         }
-
-        return response()->json($uploaded, 201);
+        
+        $recipe->delete();
+        return response()->json(['message' => 'Receta y fotos eliminadas correctamente']);
     }
 
-    // PATCH /api/recipes/{id}/main-image — marcar imagen principal
-    public function setMainImage(Request $request, $id) {
-        $request->validate(['image_id' => 'required|exists:recipe_images,id']);
-
-        $recipe = Recipe::where('id', $id)->where('user_id', $request->user()->id)->firstOrFail();
-
-        RecipeImage::where('recipe_id', $recipe->id)->update(['is_main' => false]);
-        $image = RecipeImage::find($request->image_id);
-        $image->update(['is_main' => true]);
-        $recipe->update(['main_image' => $image->path]);
-
-        return response()->json(['message' => 'Imagen principal actualizada']);
-    }
-
-    // GET /api/my-recipes — recetas del usuario autenticado (draft + published)
+    // GET /api/my-recipes
     public function myRecipes(Request $request) {
         $recipes = Recipe::with(['categories:id,name', 'images'])
             ->where('user_id', $request->user()->id)

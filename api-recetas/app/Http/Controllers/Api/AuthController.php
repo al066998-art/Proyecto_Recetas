@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\Hash;
 class AuthController extends Controller {
     public function register(Request $request) {
         $request->validate([
-            'name'     => 'required|string',
+            'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users',
-            'password' => 'required|min:6',
+            'password' => 'required|min:8|confirmed', // 'confirmed' busca password_confirmation en el request
         ]);
 
         $user = User::create([
@@ -37,6 +37,8 @@ class AuthController extends Controller {
             return response()->json(['message' => 'Credenciales incorrectas'], 401);
         }
 
+        // Opcional: Borrar tokens anteriores para que solo haya uno activo (Stateless)
+        $user->tokens()->delete(); 
         $token = $user->createToken('api-token')->plainTextToken;
 
         return response()->json(['token' => $token, 'user' => $user]);

@@ -6,26 +6,28 @@ use App\Http\Controllers\Api\ReviewController;
 use Illuminate\Support\Facades\Route;
 
 // Auth
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login',    [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register'])->name('api.register');
+Route::post('/login',    [AuthController::class, 'login'])->name('api.login');
 
-// Públicas
-Route::get('/recipes',          [RecipeController::class, 'index']);
-Route::get('/recipes/{id}',     [RecipeController::class, 'show']);
-Route::get('/categories',       [CategoryController::class, 'index']);
-Route::post('/recipes/{id}/reviews', [ReviewController::class, 'store']);
+// Públicas (No requieren Token)
+Route::get('/recipes',           [RecipeController::class, 'index']);
+Route::get('/recipes/{id}',      [RecipeController::class, 'show']);
+Route::get('/categories',        [CategoryController::class, 'index']);
+Route::post('/recipes/{id}/reviews', [ReviewController::class, 'store'])->middleware('api');
 
-// Requieren autenticación
+// Protegidas (Stateless con Sanctum)
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    Route::get('/my-recipes',                        [RecipeController::class, 'myRecipes']);
-    Route::post('/recipes',                          [RecipeController::class, 'store']);
-    Route::put('/recipes/{id}',                      [RecipeController::class, 'update']);
-    Route::delete('/recipes/{id}',                   [RecipeController::class, 'destroy']);
-    Route::post('/recipes/{id}/images',              [RecipeController::class, 'addImages']);
-    Route::patch('/recipes/{id}/main-image',         [RecipeController::class, 'setMainImage']);
+    // Rutas de Recetas
+    Route::get('/my-recipes',                 [RecipeController::class, 'myRecipes']);
+    Route::post('/recipes',                  [RecipeController::class, 'store']);
+    Route::put('/recipes/{id}',               [RecipeController::class, 'update']);
+    Route::delete('/recipes/{id}',            [RecipeController::class, 'destroy']);
+    Route::post('/recipes/{id}/images',       [RecipeController::class, 'addImages']);
+    Route::patch('/recipes/{id}/main-image',  [RecipeController::class, 'setMainImage']);
 
+    // Rutas de Categorías
     Route::post('/categories',        [CategoryController::class, 'store']);
     Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
 });
