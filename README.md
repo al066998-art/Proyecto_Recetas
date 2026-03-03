@@ -59,6 +59,11 @@ El sistema utiliza una base de datos relacional. El diagrama de relaciones se pr
 
 ---
 
+## 📊 Arquitectura de Datos
+![Diagrama de Base de Datos](./diagrama_bd.png)
+
+---
+
 ## ⚙️ Instalación y Configuración
 
 ### Backend (Laravel)
